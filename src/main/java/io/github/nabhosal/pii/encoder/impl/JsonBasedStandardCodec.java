@@ -10,7 +10,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import java.util.LinkedList;
 import java.util.List;
 
-public class JsonBasedStandardCodec implements Codec {
+public class JsonBasedStandardCodec implements Codec<String> {
 
     private String code;
     private String codecType;
@@ -47,17 +47,20 @@ public class JsonBasedStandardCodec implements Codec {
         return this;
     }
 
-    public JsonBasedStandardCodec encrypt(String jsonPath){
+    @Override
+    public Codec encrypt(String jsonPath){
         operationList.add(new Operation(jsonPath, true, false));
         return this;
     }
 
-    public JsonBasedStandardCodec addHash(String jsonPath){
+    @Override
+    public Codec addHash(String jsonPath){
         operationList.add(new Operation(jsonPath, false, true));
         return this;
     }
 
-    public JsonBasedStandardCodec encrytWithHash(String jsonPath){
+    @Override
+    public Codec encrytWithHash(String jsonPath){
         operationList.add(new Operation(jsonPath, true, true));
         return this;
     }

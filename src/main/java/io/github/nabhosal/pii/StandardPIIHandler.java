@@ -19,7 +19,6 @@ public class StandardPIIHandler implements PIIHandler {
 
     private final CodecLoader codecLoader;
     private final EncryptionService encryptionService;
-    private final static ObjectMapper objectMapper = new ObjectMapper();
 
     public StandardPIIHandler(CodecLoader codecLoader, EncryptionService encryptionService){
 
@@ -40,22 +39,9 @@ public class StandardPIIHandler implements PIIHandler {
     @Override
     public String resolve(String json) {
 
-        String codecStr = "";
-        try {
-            codecStr = objectMapper.readTree(json).get("codec").asText("");
-        } catch (IOException e) {
-            System.out.println("StandardPIIHandler: codec field not found");
-            return json;
-        } catch (NullPointerException e){
-            System.out.println("StandardPIIHandler: codec field not found");
-            return json;
-        }
+        String codecCode = codecLoader.infer(json);
 
-        if("".equalsIgnoreCase(codecStr)){
-            return json;
-        }
-
-        Codec codec = codecLoader.loadByCode(codecStr);
+        Codec codec = codecLoader.loadByCode(codecCode);
 
         return codec.resolve(json, encryptionService);
     }

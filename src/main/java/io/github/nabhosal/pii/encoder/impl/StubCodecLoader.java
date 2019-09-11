@@ -1,8 +1,10 @@
 package io.github.nabhosal.pii.encoder.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.nabhosal.pii.encoder.Codec;
 import io.github.nabhosal.pii.encoder.CodecLoader;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import static io.github.nabhosal.pii.encoder.impl.JsonBasedStandardCodec.DEFAULT_CODECTYPE;
@@ -10,6 +12,7 @@ import static io.github.nabhosal.pii.encoder.impl.JsonBasedStandardCodec.DEFAULT
 public class StubCodecLoader implements CodecLoader {
 
     private HashMap<String, Codec> codeMap = new HashMap<>();
+    private final static ObjectMapper objectMapper = new ObjectMapper();
 
     private Codec getDefault(){
         JsonBasedStandardCodec codec = new JsonBasedStandardCodec();
@@ -53,6 +56,25 @@ public class StubCodecLoader implements CodecLoader {
     public Codec loadByCode(String code){
 
         return codeMap.getOrDefault(code, getDefault());
+    }
+
+    @Override
+    public String infer(String cipher) {
+        String codecStr = "";
+        try {
+            codecStr = objectMapper.readTree(cipher).get("codec").asText("");
+        } catch (IOException e) {
+            System.out.println("StubCodecLoader: codec field not found");
+            return cipher;
+        } catch (NullPointerException e){
+            System.out.println("StubCodecLoader: codec field not found");
+            return cipher;
+        }
+
+        if("".equalsIgnoreCase(codecStr)){
+            return cipher;
+        }
+        return codecStr;
     }
 
 

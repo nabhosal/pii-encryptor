@@ -15,11 +15,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.nabhosal.pii.PIIHandlerBuilder;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 import static io.github.nabhosal.pii.encoder.impl.JsonBasedStandardCodec.DEFAULT_CODECTYPE;
 import static org.junit.Assert.assertNotEquals;
@@ -27,6 +31,11 @@ import static org.junit.Assert.assertNotEquals;
 public class TestJsonCodec {
 
     static String input_json = "{\"name\":\"full name\",\"pan\":\"123124324\",\"pan_name\":\"pan full name\",\"mobile\":\"4534534534\",\"hello\":\"Hash\",\"nested\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"arrays\":[{\"k1\":\"v1\",\"k2\":\"v2\"},{\"k1\":\"v11\",\"k2\":\"v21\"}]}";
+    static String input_csv = "Rajeev Kumar Singh,\"rajeevs@example.com\",+91-9999999999,India\n" +
+            "Sachin Tendulkar,sachin@example.com,+91-9999999998,India\n" +
+            "Barak Obama,barak.obama@example.com,+1-1111111111,United States\n" +
+            "Donald Trump,donald.trump@example.com,+1-2222222222,United States";
+
 
     @Test
     public void testBasicWorking(){
@@ -122,6 +131,25 @@ public class TestJsonCodec {
             codec.setCodecType(DEFAULT_CODECTYPE);
 
             return codec;
+        }
+
+        @Override
+        public String infer(String cipher) {
+            String codecStr = "";
+            try {
+                codecStr = new ObjectMapper().readTree(cipher).get("codec").asText("");
+            } catch (IOException e) {
+                System.out.println("StubCodecLoader: codec field not found");
+                return cipher;
+            } catch (NullPointerException e){
+                System.out.println("StubCodecLoader: codec field not found");
+                return cipher;
+            }
+
+            if("".equalsIgnoreCase(codecStr)){
+                return cipher;
+            }
+            return codecStr;
         }
     }
 
@@ -259,6 +287,219 @@ public class TestJsonCodec {
 
         String decrypteddata = piiHandler.resolve(modifiedEncryptedData);
         assertNotEquals(modifiedEncryptedData.equalsIgnoreCase(decrypteddata), "In absence of DEK, input == output for resolve method");
+    }
+
+    @Test
+    public void testCSVbyField(){
+        PIIHandler piiHandler = PIIHandlerBuilder.withDefault().withCodecLoader(new CSVByFieldIndexCodecLoader()).build();
+        String encrypteddata = piiHandler.apply(input_csv, "test-01");
+        System.out.println("encrypteddata \n\n"+encrypteddata);
+        String decrypteddata = piiHandler.resolve(encrypteddata);
+        System.out.println("decrypteddata \n\n"+decrypteddata);
+        System.out.println("Originaldata \n\n"+input_csv);
+    }
+
+    static class CSVByFieldIndexCodecLoader implements CodecLoader{
+
+        private final HashMap<String, Codec> codecMap = new HashMap<>();
+
+        public CSVByFieldIndexCodecLoader(){
+            CSVByFieldIndexStandardCodec c1 = new CSVByFieldIndexStandardCodec();
+            c1.addHash(2);
+            c1.encrypt(0);
+            c1.setCode("test-01");
+
+            codecMap.put(c1.getCode(), c1);
+        }
+
+
+        @Override
+        public Codec loadByCode(String code) {
+            return codecMap.get(code);
+        }
+
+        @Override
+        public String infer(String cipher) {
+
+            CSVParser csvParser = null;
+            String code = "";
+
+            try {
+                csvParser = CSVParser.parse(cipher, CSVFormat.DEFAULT.withSkipHeaderRecord());
+                CSVRecord first = csvParser.getRecords().get(0);
+                code = first.get(first.size() - 1);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if ("".equalsIgnoreCase(code))
+                return cipher;
+
+            return code;
+        }
+    }
+
+    static class CSVByFieldIndexStandardCodec implements Codec<Integer>{
+
+        private String code;
+        private String codecType;
+        public static final String DEFAULT_CODECTYPE = "csv_byindex_01";
+        private Set<Integer> efields;
+        private Set<Integer> hfields;
+
+        public CSVByFieldIndexStandardCodec(){
+            efields = new LinkedHashSet<>();
+            hfields = new LinkedHashSet<>();
+        }
+
+        @Override
+        public String getCode() {
+            return code;
+        }
+
+        @Override
+        public String apply(String rawdata, EncryptionService encryptionService) {
+
+            EncryptionService.EncryptionSession session = encryptionService.newSession();
+
+            CSVParser csvParser = null;
+            StringWriter csvInString = new StringWriter();
+            CSVPrinter writer = null;
+
+            try {
+                csvParser = CSVParser.parse(rawdata, CSVFormat.DEFAULT.withSkipHeaderRecord());
+                writer = new CSVPrinter(csvInString, CSVFormat.DEFAULT.withSkipHeaderRecord());
+                for (CSVRecord csvRecord : csvParser) {
+                    int totalFields = csvRecord.size();
+                    List<String> list = new ArrayList<String>(totalFields + hfields.size() + 3);
+
+                    for(String field : csvRecord)
+                        list.add(field);
+
+                    for(int fieldIndex : hfields)
+                        list.add(DigestUtils.sha256Hex(list.get(fieldIndex)));
+
+                    for(int fieldIndex : efields)
+                        list.set(fieldIndex, encryptionService.encrypt(session, list.get(fieldIndex)));
+
+                    list.add(session.geteDEK());
+                    list.add(session.getKEKId());
+                    list.add(DEFAULT_CODECTYPE);
+                    list.add(getCode());
+
+                    writer.printRecord(list);
+                }
+
+                writer.close(true);
+                return csvInString.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return rawdata;
+        }
+
+        @Override
+        public String resolve(String cipher, EncryptionService encryptionService) {
+
+            EncryptionService.EncryptionSession session = null;
+
+            CSVParser csvParser = null;
+            StringWriter csvInString = new StringWriter();
+            CSVPrinter writer = null;
+
+            try {
+                csvParser = CSVParser.parse(cipher, CSVFormat.DEFAULT.withSkipHeaderRecord());
+                writer = new CSVPrinter(csvInString, CSVFormat.DEFAULT.withSkipHeaderRecord());
+
+                CSVParser forInfer = CSVParser.parse(cipher, CSVFormat.DEFAULT.withSkipHeaderRecord());
+                CSVRecord first = forInfer.getRecords().get(0);
+                String eDEK = first.get(first.size() - 4);
+                String KEKId = first.get(first.size() - 3);
+
+                session = encryptionService.buildSession(eDEK, KEKId);
+
+                for (CSVRecord csvRecord : csvParser) {
+
+                    int totalFields = csvRecord.size() - hfields.size() - 3 - 1;
+
+                    List<String> list = new ArrayList<String>(csvRecord.size());
+                    for(int i = 0; i < totalFields ; i++){
+
+                        if( efields.contains(i)){
+                            list.add(encryptionService.decrypt(session, csvRecord.get(i)));
+                        }else
+                            list.add(csvRecord.get(i));
+                    }
+
+                    writer.printRecord(list);
+                }
+
+                writer.close(true);
+                return csvInString.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return cipher;
+        }
+
+        @Override
+        public Codec encrypt(Integer field) {
+            efields.add(Integer.valueOf(field));
+            return this;
+        }
+
+        @Override
+        public Codec addHash(Integer field) {
+            hfields.add(Integer.valueOf(field));
+            return this;
+        }
+
+        @Override
+        public Codec encrytWithHash(Integer field) {
+            return encrypt(field).addHash(field);
+        }
+
+        @Override
+        public Codec setCode(String code) {
+            this.code = code;
+            return this;
+        }
+    }
+
+    @Test
+    public void csvplaytemp(){
+        String data = "Rajeev Kumar Singh,\"rajeevs@example.com\",+91-9999999999,India\n" +
+                "Sachin Tendulkar,sachin@example.com,+91-9999999998,India\n" +
+                "Barak Obama,barak.obama@example.com,+1-1111111111,United States\n" +
+                "Donald Trump,donald.trump@example.com,+1-2222222222,United States";
+
+        CSVParser csvParser = null;
+        StringWriter csvInString = new StringWriter();
+        CSVPrinter writer = null;
+
+        try {
+            csvParser = CSVParser.parse(data, CSVFormat.DEFAULT.withSkipHeaderRecord());
+            writer = new CSVPrinter(csvInString, CSVFormat.DEFAULT.withSkipHeaderRecord());
+            for (CSVRecord csvRecord : csvParser) {
+                List<String> list = new LinkedList<>();
+                for(String field : csvRecord){
+                    list.add(field);
+                }
+
+                list.add("DEK");
+                list.add("KEKId");
+                list.add("Code-Type");
+                writer.printRecord(list);
+            }
+
+            writer.close(true);
+            System.out.println(csvInString);
+            System.out.println(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

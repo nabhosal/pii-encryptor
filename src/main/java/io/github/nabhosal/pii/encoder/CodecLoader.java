@@ -16,4 +16,6 @@ public interface CodecLoader {
      * @return Codec
      */
     public Codec loadByCode(String code);
+
+    public String infer(String cipher);
 }
