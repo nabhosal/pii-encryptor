@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 import static io.github.nabhosal.pii.encoder.impl.JsonBasedStandardCodec.DEFAULT_CODECTYPE;
 
-public class StubCodecLoader implements CodecLoader {
+public class DemoJsonCodecLoader implements CodecLoader {
 
     private HashMap<String, Codec> codeMap = new HashMap<>();
     private final static ObjectMapper objectMapper = new ObjectMapper();
@@ -23,7 +23,7 @@ public class StubCodecLoader implements CodecLoader {
         return codec;
     }
 
-    public StubCodecLoader(){
+    public DemoJsonCodecLoader(){
         JsonBasedStandardCodec codec = new JsonBasedStandardCodec();
         codec.encrypt("$.pan");
         codec.addHash("$.pan_name");
@@ -64,10 +64,10 @@ public class StubCodecLoader implements CodecLoader {
         try {
             codecStr = objectMapper.readTree(cipher).get("codec").asText("");
         } catch (IOException e) {
-            System.out.println("StubCodecLoader: codec field not found");
+            System.out.println("DemoJsonCodecLoader: codec field not found");
             return cipher;
         } catch (NullPointerException e){
-            System.out.println("StubCodecLoader: codec field not found");
+            System.out.println("DemoJsonCodecLoader: codec field not found");
             return cipher;
         }
 
@@ -76,6 +76,4 @@ public class StubCodecLoader implements CodecLoader {
         }
         return codecStr;
     }
-
-
 }

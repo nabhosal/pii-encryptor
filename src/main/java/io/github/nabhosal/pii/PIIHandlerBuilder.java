@@ -4,13 +4,13 @@ import io.github.nabhosal.pii.cipher.impl.AESBasedEncryptionService;
 import io.github.nabhosal.pii.cipher.EncryptionService;
 import io.github.nabhosal.pii.cipher.impl.MapBasedKeyProviderImpl;
 import io.github.nabhosal.pii.encoder.CodecLoader;
-import io.github.nabhosal.pii.encoder.impl.StubCodecLoader;
+import io.github.nabhosal.pii.encoder.impl.DemoJsonCodecLoader;
 
 /**
  * <h1>PIIHandlerBuilder</h1>
  * It is used to build StandardPIIHandler instance with configurable CodecLoader and EncryptionService
  * The standard method, will use default implementation such as
- * StubCodecLoader impl class of CodecLoader for loading the stubs,
+ * DemoJsonCodecLoader impl class of CodecLoader for loading the stubs,
  * AESBasedEncryptionService impl class of EncryptionService for encrypting and decrypting field level data using AES
  * MapBasedKeyProviderImpl impl class of KeyProvider for loading different KEK keys
  * We encourage to re-use the above class based on different use case
@@ -30,7 +30,7 @@ public class PIIHandlerBuilder{
         this.encryptionService = encryptionService;
     }
     /**
-     * it return StandardPIIHandler impl with default impl such as StubCodecLoader and AESBasedEncryptionService
+     * it return StandardPIIHandler impl with default impl such as DemoJsonCodecLoader and AESBasedEncryptionService
      *
      * @return StandardPIIHandler instance
      */
@@ -39,12 +39,12 @@ public class PIIHandlerBuilder{
     }
 
     /**
-     * it return PIIHandlerBuilder instance with default impl such as StubCodecLoader and AESBasedEncryptionService
+     * it return PIIHandlerBuilder instance with default impl such as DemoJsonCodecLoader and AESBasedEncryptionService
      *
      * @return PIIHandlerBuilder instance
      */
     public static PIIHandlerBuilder withDefault(){
-        return new PIIHandlerBuilder(new StubCodecLoader(), new AESBasedEncryptionService(new MapBasedKeyProviderImpl()));
+        return new PIIHandlerBuilder(new DemoJsonCodecLoader(), new AESBasedEncryptionService(new MapBasedKeyProviderImpl()));
     }
 
     /**

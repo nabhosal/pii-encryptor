@@ -2,7 +2,7 @@ package io.github.nabhosal.pii.encoder;
 /**
  * <h1>CodecLoader</h1>
  * Interface provide ability to load Codec from external sources such file, databases, or through codec defined in
- * java class e.g. StubCodecLoader
+ * java class e.g. DemoJsonCodecLoader
  * <p>
  *
  * @author  Nilesh Bhosale
