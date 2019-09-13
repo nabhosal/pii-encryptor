@@ -5,6 +5,7 @@ import io.github.nabhosal.pii.cipher.EncryptionService;
 import io.github.nabhosal.pii.encoder.Codec;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
+import io.github.nabhosal.pii.exception.CodecException;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.util.LinkedList;
@@ -164,8 +165,7 @@ public class JsonBasedStandardCodec implements Codec<String> {
             eDEKraw = jsonDocRead.read("$.DEK").toString();
             KEKIdraw = jsonDocRead.read("$.KEKID").toString();
         }catch (PathNotFoundException e){
-            System.out.println("JsonBasedStandardCodec: either DEK or KEKID is absent");
-            return json;
+            throw new CodecException("JsonBasedStandardCodec: either DEK or KEKID is absent", e);
         }
 
         String eDEK = eDEKraw.substring(1, eDEKraw.length() - 1);

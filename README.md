@@ -3,6 +3,23 @@
 It is a utility project to help implement field-level encryption on the csv or json document. It is designed to be used by service which needs PCI or similar compliance. It preloaded with a default implementation for csv and json, it simplifies indicating fields using Jsonpath for json and field index in case of csv. 
 Preloaded class are designed to take care of most common implementation challenges, making developer focus on encryption strategy.  
 
+##### Get it as Maven dependency
+```xml
+<dependency>
+  <groupId>io.github.nabhosal</groupId>
+  <artifactId>app-security</artifactId>
+  <version>1.0-SNAPSHOT</version>
+</dependency>
+```
+external dependencies it used (All are authentic & secure libraries)
+```groovy
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.9'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.9'
+    compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
+    compile group: 'commons-codec', name: 'commons-codec', version: '1.13'
+    compile group: 'org.apache.commons', name: 'commons-csv', version: '1.7'
+```
+
 ### Basic terminologies
  
 * **Field-level encryption:** focus on encrypting data at specified fields only.
@@ -119,6 +136,32 @@ encrypteddata {"name":"full name","pan":"kPNOioYbrsw/64s0df4n+A==","pan_name":"p
 decrypteddata {"name":"full name","pan":"123124324","pan_name":"pan full name","mobile":"4534534534","hello":"Hash","nested":{"key1":"value1","key2":"value2"},"arrays":[{"k1":"v1","k2":"v2"},{"k1":"v11","k2":"v21"}]}
 
 ```
+
+#### How to apply field-level encryption on CSV
+```java
+/* csv data */
+private static String input_csv = "Rajeev Kumar Singh,\"rajeevs@example.com\",+91-9999999999,India\n" +
+            "Sachin Tendulkar,sachin@example.com,+91-9999999998,India\n" +
+            "Barak Obama,barak.obama@example.com,+1-1111111111,United States\n" +
+            "Donald Trump,donald.trump@example.com,+1-2222222222,United States";
+
+/* Codec */
+CSVByFieldIndexStandardCodec c1 = new CSVByFieldIndexStandardCodec();
+            c1.addHash(2);
+            c1.encrypt(0);
+            c1.setCode("test-01");
+            
+/* Encrypt & decrypt the csv field level data */
+
+ PIIHandler piiHandler = PIIHandlerBuilder.withDefault()
+                .withCodecLoader(new DemoCSVCodecLoader()).build();
+        String encrypteddata = piiHandler.apply(input_csv, "test-01");
+        String decrypteddata = piiHandler.resolve(encrypteddata);
+        assertNotEquals("input csv is not same after decryption", decrypteddata, input_csv);
+
+/* for more details refer TestCSVCodec.java */
+```
+
 #### Working with custom implementation
 
 <details><summary>Custom implementation to handle CSV </summary>
@@ -492,4 +535,5 @@ public class TestJsonCodec {
 ```
 </p>
 </details>
+
 

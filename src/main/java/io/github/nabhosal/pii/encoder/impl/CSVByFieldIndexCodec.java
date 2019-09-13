@@ -2,6 +2,7 @@ package io.github.nabhosal.pii.encoder.impl;
 
 import io.github.nabhosal.pii.cipher.EncryptionService;
 import io.github.nabhosal.pii.encoder.Codec;
+import io.github.nabhosal.pii.exception.CodecException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -77,10 +78,8 @@ public class CSVByFieldIndexCodec implements Codec<Integer>{
             writer.close(true);
             return csvInString.toString();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new CodecException("Error during parsing", e);
         }
-
-        return rawdata;
     }
 
     @Override
@@ -122,10 +121,8 @@ public class CSVByFieldIndexCodec implements Codec<Integer>{
             writer.close(true);
             return csvInString.toString();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new CodecException("Error during parsing", e);
         }
-
-        return cipher;
     }
 
     @Override

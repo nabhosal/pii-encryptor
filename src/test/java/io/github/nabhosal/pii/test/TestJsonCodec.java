@@ -202,7 +202,6 @@ public class TestJsonCodec {
             codec.encrypt("$.pan");
             codec.setCode("test-codec");
             codec.setCodecType(DEFAULT_CODECTYPE);
-
             return codec;
         }
 

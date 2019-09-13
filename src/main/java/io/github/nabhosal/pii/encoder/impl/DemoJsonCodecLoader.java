@@ -3,6 +3,7 @@ package io.github.nabhosal.pii.encoder.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.nabhosal.pii.encoder.Codec;
 import io.github.nabhosal.pii.encoder.CodecLoader;
+import io.github.nabhosal.pii.exception.CodecException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -64,11 +65,10 @@ public class DemoJsonCodecLoader implements CodecLoader {
         try {
             codecStr = objectMapper.readTree(cipher).get("codec").asText("");
         } catch (IOException e) {
-            System.out.println("DemoJsonCodecLoader: codec field not found");
-            return cipher;
+//            System.out.println("DemoJsonCodecLoader: codec field not found");
+            throw new CodecException("DemoJsonCodecLoader: codec field not found", e);
         } catch (NullPointerException e){
-            System.out.println("DemoJsonCodecLoader: codec field not found");
-            return cipher;
+            throw new CodecException("DemoJsonCodecLoader: codec field not found", e);
         }
 
         if("".equalsIgnoreCase(codecStr)){

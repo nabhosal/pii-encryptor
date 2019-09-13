@@ -2,6 +2,7 @@ package io.github.nabhosal.pii.encoder.impl;
 
 import io.github.nabhosal.pii.encoder.Codec;
 import io.github.nabhosal.pii.encoder.CodecLoader;
+import io.github.nabhosal.pii.exception.CodecException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -47,7 +48,7 @@ public class DemoCSVCodecLoader implements CodecLoader {
             CSVRecord first = csvParser.getRecords().get(0);
             code = first.get(first.size() - 1);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new CodecException("Not able to parse codec", e);
         }
 
         if ("".equalsIgnoreCase(code))
